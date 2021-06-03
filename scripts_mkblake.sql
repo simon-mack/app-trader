@@ -85,3 +85,34 @@ FROM both_stores
 WHERE lifespan > 9.5
 ORDER BY lifespan DESC, play_store_genres, app_store_primary_genre;
 
+/*Darcy code, Thursday AM*/
+WITH both_stores AS (SELECT DISTINCT app_store_apps.name,
+					app_store_apps.price AS app_store_price,
+					ROUND(ROUND(app_store_apps.rating/5,1)*5,1) AS app_store_round_rating,
+					app_store_apps.content_rating AS app_store_content_rating,
+					app_store_apps.primary_genre AS app_store_primary_genre,
+					play_store_apps.genres AS play_store_genres,
+					ROUND(ROUND(play_store_apps.rating/5,1)*5,1) AS play_store_round_rating,
+					TRIM('$' FROM play_store_apps.price)::numeric AS play_store_price,
+					play_store_apps.content_rating AS play_store_content_rating
+			FROM app_store_apps INNER JOIN play_store_apps
+			ON app_store_apps.name = play_store_apps.name
+			ORDER BY app_store_apps.name),
+			both_stores_lifespan AS (SELECT *,
+ 			ROUND(((app_store_round_rating/0.5)+1),1)
+			AS app_store_lifespan,
+			ROUND(((play_store_round_rating/0.5)+1),1)
+			AS play_store_lifespan 
+			FROM both_stores),
+		both_stores_each_profit AS (SELECT *,
+  		(2000*12*app_store_lifespan)-(CASE WHEN app_store_price = 0 THEN 10000
+		ELSE app_store_price*10000 END) AS app_store_profit,
+		(2000*12*play_store_lifespan)-(CASE WHEN play_store_price = 0 THEN 10000
+		ELSE play_store_price*10000 END) AS play_store_profit
+		FROM both_stores_lifespan),
+		both_stores_total_profit AS (SELECT *,
+		app_store_profit + play_store_profit AS total_profit
+			FROM both_stores_each_profit)
+			SELECT *
+			FROM both_stores_total_profit
+			ORDER BY total_profit DESC;
